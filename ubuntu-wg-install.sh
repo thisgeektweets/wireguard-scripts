@@ -98,3 +98,5 @@ chown -R root:root /etc/wireguard/
 chmod -R og-rwx /etc/wireguard/*
 chmod +x /etc/wireguard/new-wg-client.sh
 wg-quick up wg0
+
+touch "/home/ubuntu/wg-install-ran"

@@ -2,8 +2,7 @@
 port=1194
 networkAdapter=ens5
 
-add-apt-repository ppa:wireguard/wireguard -y
-apt update && DEBIAN_FRONTEND=noninteractive apt upgrade -y && apt autoremove -y && apt autoclean -y
+apt update
 apt install openresolv wireguard qrencode -y
 
 ufw allow $port/udp
@@ -33,7 +32,7 @@ net.ipv4.ip_forward=1
 net.ipv6.conf.all.forwarding=1
 EOF
 
-cat > /etc/wireguard/new-wg-client.sh << ENDOFFILE
+cat > /etc/wireguard/new-wg-client-v2.sh << ENDOFFILE
 #!/bin/bash
 # Variables
     # Read in user variables
@@ -50,35 +49,35 @@ cat > /etc/wireguard/new-wg-client.sh << ENDOFFILE
         read clientIP
 
     # Set script variables
-        domain="\$(curl ifconfig.me)"
-        port="1194"
-        ipRange="10.68.0.0/16"
-        serverPublicKey="\$(cat /etc/wireguard/server_publickey)"
-        serverPrivateKey="\$(cat /etc/wireguard/server_privatekey)"
+        domain="$(curl ifconfig.me)"
+        port="443"
+        ipRange="172.16.12.0/24"
+        serverPublicKey="$(cat /etc/wireguard/server_publickey)"
+        serverPrivateKey="$(cat /etc/wireguard/server_privatekey)"
 
 # Main
     # Create keys
         mkdir /etc/wireguard/clients
-        wg genkey | tee /etc/wireguard/clients/\$clientName-privatekey | wg pubkey > /etc/wireguard/clients/\$clientName-publickey
-        clientNamePublicKey="\$(</etc/wireguard/clients/\$clientName-publickey)"
-        clientNamePrivateKey="\$(</etc/wireguard/clients/\$clientName-privatekey)"
+        wg genkey | tee /etc/wireguard/clients/$clientName-privatekey | wg pubkey > /etc/wireguard/clients/$clientName-publickey
+        clientNamePublicKey="$(</etc/wireguard/clients/$clientName-publickey)"
+        clientNamePrivateKey="$(</etc/wireguard/clients/$clientName-privatekey)"
 
     # Update wireguard main config
         echo "[Peer]" >> /etc/wireguard/wg0.conf
-        echo "#\$clientName" >> /etc/wireguard/wg0.conf
-        echo "PublicKey = \$clientNamePublicKey" >> /etc/wireguard/wg0.conf
-        echo "AllowedIPs = \$clientIP/32" >> /etc/wireguard/wg0.conf
+        echo "#$clientName" >> /etc/wireguard/wg0.conf
+        echo "PublicKey = $clientNamePublicKey" >> /etc/wireguard/wg0.conf
+        echo "AllowedIPs = $clientIP/32" >> /etc/wireguard/wg0.conf
 
     # Create client config
-        touch /etc/wireguard/clients/\$clientName.conf
-        echo "[Interface]" > /etc/wireguard/clients/\$clientName.conf
-        echo "Address = \$clientIP/32" >> /etc/wireguard/clients/\$clientName.conf
-        echo "PrivateKey = \$clientNamePrivateKey" >> /etc/wireguard/clients/\$clientName.conf
-        echo "DNS = 1.1.1.1" >> /etc/wireguard/clients/\$clientName.conf
-        echo "[Peer]" >> /etc/wireguard/clients/\$clientName.conf
-        echo "PublicKey = \$serverPublicKey" >> /etc/wireguard/clients/\$clientName.conf
-        echo "Endpoint = \$domain:\$port" >> /etc/wireguard/clients/\$clientName.conf
-        echo "AllowedIPs = \$ipRange" >> /etc/wireguard/clients/\$clientName.conf
+        touch /etc/wireguard/clients/$clientName.conf
+        echo "[Interface]" > /etc/wireguard/clients/$clientName.conf
+        echo "Address = $clientIP/32" >> /etc/wireguard/clients/$clientName.conf
+        echo "PrivateKey = $clientNamePrivateKey" >> /etc/wireguard/clients/$clientName.conf
+        echo "DNS = 1.1.1.1" >> /etc/wireguard/clients/$clientName.conf
+        echo "[Peer]" >> /etc/wireguard/clients/$clientName.conf
+        echo "PublicKey = $serverPublicKey" >> /etc/wireguard/clients/$clientName.conf
+        echo "Endpoint = $domain:$port" >> /etc/wireguard/clients/$clientName.conf
+        echo "AllowedIPs = $ipRange" >> /etc/wireguard/clients/$clientName.conf
 
 # Post
     # Restart wg0 tunnel
@@ -86,10 +85,11 @@ cat > /etc/wireguard/new-wg-client.sh << ENDOFFILE
         wg-quick up wg0
 
     # Print QR Code
-        qrencode -t ansiutf8 < /etc/wireguard/clients/\$clientName.conf
-    
+        qrencode -t ansiutf8 < /etc/wireguard/clients/$clientName.conf
+
     # Print new client config
-        cat /etc/wireguard/clients/\$clientName.conf
+        cat /etc/wireguard/clients/$clientName.conf
+
 ENDOFFILE
 
 
